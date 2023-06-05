@@ -1,5 +1,7 @@
 Below content inherited from open sources
-  SEC: https://uefi.org/specs/PI/1.8/V1_Security_SEC_Phase_Information.html
+  https://uefi.org/specs/PI/1.8/V1_Security_SEC_Phase_Information.html
+  PI Spec 1.6
+  
   
 Some details about Flash:
 Firmware Volumes: Pre-EFI Initialization Modules (PEIMs) reside in firmware volumes (FVs). The PEI Foundation, defined here, must reside in the Boot Firmware Volume (BFV). The PEI phase supports the ability for PEIMs to reside in multiple firmware volumes.. Other PEIMs can expose firmware volumes for use by the PEI Foundation.
@@ -67,6 +69,10 @@ Open: What is Boot strap processor.?
     It will start executing PEIMs based on PPIs installed by foundation code.
     Last PEIM is to hand over control to DXE phase.
  
+    PEI --> DXE
+    The PEI Foundation uses a special PPI named the DXE Initial Program Load (IPL) PPI to discover and dispatch the DXE Foundation and components that are needed to run the DXE Foundation The final action of the PEI Foundation is to locate and pass control to the DXE IPL PPI. To accomplish this, the PEI Foundation scans all PPIs by GUID for the GUID matching the DXE IPL PPI.
+    
+    
 
 => UEFI Driver execution code(DXE)
   DXE Foundation - Produces below services
