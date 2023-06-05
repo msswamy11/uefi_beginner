@@ -1,41 +1,71 @@
 Below content inherited from open sources
   SEC: https://uefi.org/specs/PI/1.8/V1_Security_SEC_Phase_Information.html
   
+Some details about Flash:
+Firmware Volumes: Pre-EFI Initialization Modules (PEIMs) reside in firmware volumes (FVs). The PEI Foundation, defined here, must reside in the Boot Firmware Volume (BFV). The PEI phase supports the ability for PEIMs to reside in multiple firmware volumes.. Other PEIMs can expose firmware volumes for use by the PEI Foundation.
 
+The firmware volume (FV) in which the PEI Foundation resides is known as the Boot Firmware Volume (BFV). PEIMs may reside in the BFV or other FVs. A “special” PEIM must be resident in the BFV to provide information about the location of the other FVs.
+
+It is expected that the SEC infrastructure code and PEI Foundation are not linked together as a single ROMable executable image
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
 With more analysis.,
+
 As we learned 8086 operates in real mode that is 16 bit.
   Segments -> 1) code segment, 2) Data segment, 3) stack segment, 4) Extra segment.
   Physical address = Segment * 16 + Offset
   Memory protection not available, can be achieved with GDT.
   
-For compatability latest processors will start from real mode and switch to protected mode.
+For compatability, latest processors will start from real mode and switch to protected mode.
 
-=> UEFI Security phase
-• Handling all platform restart events
-• Creating a temporary memory store
+=> UEFI Security phase(SEC)
+Opens:
+  Locates SecCore FFS means ?
+
+• Handling all platform restart events.
+• Locate Boot Firmware volume(BFV) on flash memory by its GUID.
+• Creating a temporary memory store.
   MTRR's configured to use chache memory as RAM(CAR).
   Here No eviction mode enabled to avoid gradual data export into primary memory that leads SEC phase failure.
-  MTRR's also responsible for Boot Firmware volume write protected.
-• Serving as the root of trust in the system
+  MTRR's also responsible for Boot Firmware volume write protected(Open: These are on Flash why to make WP??).
+• Serving as the root of trust in the system.
   In inductive security design systems, the module which is going to take control subsequently has to be authenticated by SEC firmware(which has root).
   SO here PEI foundation has to be authenticated by SEC.
   Understanding: 
     Piece of firmware which is on ROM, encrypted with OEM signature.
-• Passing handoff information to the PEI Foundation
+• Passing handoff information to the PEI Foundation.
   CAR size and location.
   Stack size and location.
+  BFV size and location.
+  List of PPI descriptors to be installed by PEI initially.
+    Platform Information PPI: Abstracts platform specific information required for PEI foundation to know where to begin dispatching PEIMs.
+    HOB Data PPI: If this PPI present in list of PPIs from SEC to PEI phase, PEI foundation call gethob() function to get list of all HOBs and to install it. This retriving and installing HOB list will happen in between installing PPI list passed from SEC to PEI and PEIM dispatcher.
 
+Execution never comes to SEC, unit next reset.
 
 
 => UEFI Pre-EFI Initialization code(PEI)
-  PEI Foundation
-    PPI Service - Locate,
-    Firmware volume services - To locate FV, and PEIMs.
-    Memory services - Create meomory, copy, move.
+Open: What is Boot strap processor.?
+    -> PEI Foundation
+    Initialize Permanent memory fully/partially based on implementation. (Where exactly ? end of PEI ? In PEI foundation or PEIMs phase ?)
+    Pass Primary memory information to DXE via HOB.
+    Describe Firmware volume locations in HOB.
+    Discover boot mode.
     
-    It will install 
-  PEI Dispatcher
+    PEI services list
+      PPI Service - Facilitate intermodule calls between PEIMs.
+      Boot mode services - S3, S5, Normal boot.
+      HOB services - Create data structures to transfer data.
+      Firmware volume services - To locate FV, and PEIMs (Inside Firmware File system - FFS).
+      Memory services - Memory management services to Create meomory, copy, move. Before and after permanent memory discover.
+      Status code services - Post code(Port 80) and UART for debug test.
+      Reset services - To initiate warm/cold reset.
+    
+
+    -> Pre EFI Initialization Module(PEIM) Dispatcher
+    State machine, Evaluate dependency expression(DEPEX) of each PEIM which are evaluated. If DEPEX evaluates to TURE, PEIM invoked else Dispatcher move to next PEIM.
     It will start executing PEIMs based on PPIs installed by foundation code.
+    Last PEIM is to hand over control to DXE phase.
  
 
 => UEFI Driver execution code(DXE)
